@@ -2,7 +2,7 @@
 
 This file is part of VROOM.
 
-Copyright (c) 2015-2020, Julien Coupey.
+Copyright (c) 2015-2021, Julien Coupey.
 All rights reserved (see LICENSE).
 
 */
@@ -23,7 +23,8 @@ Summary::Summary(unsigned unassigned, unsigned amount_size)
     priority(0),
     duration(0),
     waiting_time(0),
-    distance(0) {
+    distance(0),
+    violations(0, 0) {
 }
 
 } // namespace vroom

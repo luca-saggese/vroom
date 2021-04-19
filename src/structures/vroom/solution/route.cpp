@@ -2,7 +2,7 @@
 
 This file is part of VROOM.
 
-Copyright (c) 2015-2020, Julien Coupey.
+Copyright (c) 2015-2021, Julien Coupey.
 All rights reserved (see LICENSE).
 
 */
@@ -10,6 +10,9 @@ All rights reserved (see LICENSE).
 #include "structures/vroom/solution/route.h"
 
 namespace vroom {
+
+Route::Route() {
+}
 
 Route::Route(Id vehicle,
              std::vector<Step>&& steps,
@@ -20,7 +23,9 @@ Route::Route(Id vehicle,
              Priority priority,
              const Amount& delivery,
              const Amount& pickup,
-             const std::string& description)
+             const std::string& profile,
+             const std::string& description,
+             const Violations&& violations)
   : vehicle(vehicle),
     steps(std::move(steps)),
     cost(cost),
@@ -30,8 +35,12 @@ Route::Route(Id vehicle,
     priority(priority),
     delivery(delivery),
     pickup(pickup),
+    profile(profile),
     description(description),
+    violations(std::move(violations)),
     distance(0) {
+  assert(steps.empty() or (steps.front().step_type == STEP_TYPE::START and
+                           steps.back().step_type == STEP_TYPE::END));
 }
 
 } // namespace vroom

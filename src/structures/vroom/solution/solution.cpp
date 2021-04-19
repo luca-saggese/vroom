@@ -2,7 +2,7 @@
 
 This file is part of VROOM.
 
-Copyright (c) 2015-2020, Julien Coupey.
+Copyright (c) 2015-2021, Julien Coupey.
 All rights reserved (see LICENSE).
 
 */
@@ -32,6 +32,7 @@ Solution::Solution(unsigned code,
     summary.priority += route.priority;
     summary.duration += route.duration;
     summary.waiting_time += route.waiting_time;
+    summary.violations += route.violations;
   }
 }
 

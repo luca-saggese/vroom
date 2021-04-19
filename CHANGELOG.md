@@ -2,6 +2,51 @@
 
 ## [Unreleased]
 
+### Added
+
+- Support for heterogeneous vehicle routing profiles (#394)
+- Optional `speed_factor` key for vehicle-level tuning (#450)
+- Support Valhalla as routing engine (#306)
+- Report `type` for unassigned tasks in output (#469)
+
+### Changed
+
+- A mix of empty and non-empty `skills` arrays is allowed in input (#460)
+- Formatting script updated to use version 10 of clang-format (#452)
+- vroom will now read json input from stdin if no other input is specified (#457)
+- Clearer error message with invalid json response from http routing request (#471)
+
+### Fixed
+
+- Compatibility with Visual Studio 2019 (#448)
+- The pd_shift operation can now insert a shipment at the end of a route (#462)
+- Truncated distance value for end step (#463)
+- Zero distance value for last break in open-ended route (#475)
+- Multi-thread exception handling (#417, #478)
+
+## [v1.9.0] - 2021-03-04
+
+### Added
+
+- Ability to choose ETA and report violations for custom routes using `-c` (#430)
+- Custom route description using new `steps` key for a `vehicle` in input (#430)
+- A `violations` object is reported in output at `step`, `route` and `summary` level (#430)
+- `libglpk` used as an optional dependency, required for `-c` (#430)
+
+### Changed
+
+- Reduce computing time by refactoring `LocalSearch::try_job_additions` (#392)
+- Reduce build time by refactoring includes (#425)
+- Improve error message with wrong profile using libosrm (#397)
+- Check for duplicate ids across tasks of the same type: `job`, `pickup`, `delivery` (#430)
+- Check for duplicate ids across `break` tasks for the same vehicle (#430)
+- Report `service` and `waiting_time` for all `step` objects in output (#430)
+- Always report a `start` and `end` step for the route, regardless of vehicle description (#430)
+
+### Fixed
+
+- Rapidjson assert on invalid syntax for first vehicle (#418)
+
 ## [v1.8.0] - 2020-09-29
 
 ### Added

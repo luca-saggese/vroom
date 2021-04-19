@@ -2,13 +2,12 @@
 
 This file is part of VROOM.
 
-Copyright (c) 2015-2020, Julien Coupey.
+Copyright (c) 2015-2021, Julien Coupey.
 All rights reserved (see LICENSE).
 
 */
 
 #include "problems/cvrp/operators/intra_exchange.h"
-#include "utils/helpers.h"
 
 namespace vroom {
 namespace cvrp {
@@ -44,7 +43,6 @@ IntraExchange::IntraExchange(const Input& input,
 }
 
 void IntraExchange::compute_gain() {
-  const auto& m = _input.get_matrix();
   const auto& v = _input.vehicles[s_vehicle];
 
   // Consider the cost of replacing job at rank s_rank with target
@@ -59,15 +57,15 @@ void IntraExchange::compute_gain() {
   if (s_rank == 0) {
     if (v.has_start()) {
       auto p_index = v.start.value().index();
-      new_previous_cost = m[p_index][t_index];
+      new_previous_cost = v.cost(p_index, t_index);
     }
   } else {
     auto p_index = _input.jobs[s_route[s_rank - 1]].index();
-    new_previous_cost = m[p_index][t_index];
+    new_previous_cost = v.cost(p_index, t_index);
   }
 
   auto n_index = _input.jobs[s_route[s_rank + 1]].index();
-  Gain new_next_cost = m[t_index][n_index];
+  Gain new_next_cost = v.cost(t_index, n_index);
 
   Gain s_gain = _sol_state.edge_costs_around_node[s_vehicle][s_rank] -
                 new_previous_cost - new_next_cost;
@@ -80,16 +78,16 @@ void IntraExchange::compute_gain() {
   new_next_cost = 0;
 
   auto p_index = _input.jobs[t_route[t_rank - 1]].index();
-  new_previous_cost = m[p_index][s_index];
+  new_previous_cost = v.cost(p_index, s_index);
 
   if (t_rank == t_route.size() - 1) {
     if (v.has_end()) {
       auto n_index = v.end.value().index();
-      new_next_cost = m[s_index][n_index];
+      new_next_cost = v.cost(s_index, n_index);
     }
   } else {
     auto n_index = _input.jobs[t_route[t_rank + 1]].index();
-    new_next_cost = m[s_index][n_index];
+    new_next_cost = v.cost(s_index, n_index);
   }
 
   Gain t_gain = _sol_state.edge_costs_around_node[s_vehicle][t_rank] -

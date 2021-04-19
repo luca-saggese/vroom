@@ -5,7 +5,7 @@
 
 This file is part of VROOM.
 
-Copyright (c) 2015-2020, Julien Coupey.
+Copyright (c) 2015-2021, Julien Coupey.
 All rights reserved (see LICENSE).
 
 */
@@ -13,9 +13,15 @@ All rights reserved (see LICENSE).
 #include <array>
 #include <limits>
 #include <list>
+#include <optional>
 #include <string>
 #include <unordered_set>
 #include <vector>
+
+#ifdef _MSC_VER
+// include support for "and"/"or"
+#include <iso646.h>
+#endif
 
 namespace vroom {
 
@@ -44,7 +50,7 @@ const std::string DEFAULT_PROFILE = "car";
 constexpr Priority MAX_PRIORITY = 100;
 
 // Available routing engines.
-enum class ROUTER { OSRM, LIBOSRM, ORS };
+enum class ROUTER { OSRM, LIBOSRM, ORS, VALHALLA };
 
 // Used to describe a routing server.
 struct Server {
@@ -83,6 +89,16 @@ struct HeuristicParameters {
                                 float regret_coeff)
     : heuristic(heuristic), init(init), regret_coeff(regret_coeff) {
   }
+};
+
+// Possible violations.
+enum class VIOLATION {
+  LEAD_TIME,
+  DELAY,
+  LOAD,
+  SKILLS,
+  PRECEDENCE,
+  MISSING_BREAK
 };
 
 } // namespace vroom

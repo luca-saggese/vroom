@@ -5,7 +5,7 @@
 
 This file is part of VROOM.
 
-Copyright (c) 2015-2020, Julien Coupey.
+Copyright (c) 2015-2021, Julien Coupey.
 All rights reserved (see LICENSE).
 
 */
@@ -15,6 +15,7 @@ All rights reserved (see LICENSE).
 #include "structures/vroom/break.h"
 #include "structures/vroom/job.h"
 #include "structures/vroom/location.h"
+#include "structures/vroom/solution/violations.h"
 
 namespace vroom {
 
@@ -31,6 +32,8 @@ struct Step {
   Duration duration;
   Duration waiting_time;
   Distance distance;
+
+  Violations violations;
 
   Step(STEP_TYPE type, Location location, const Amount& load);
 

@@ -2,7 +2,7 @@
 
 This file is part of VROOM.
 
-Copyright (c) 2015-2020, Julien Coupey.
+Copyright (c) 2015-2021, Julien Coupey.
 All rights reserved (see LICENSE).
 
 */
@@ -14,10 +14,49 @@ All rights reserved (see LICENSE).
 #include "../include/rapidjson/writer.h"
 
 #include "utils/output_json.h"
-#include "utils/version.h"
 
 namespace vroom {
 namespace io {
+
+inline rapidjson::Value
+get_violations(const Violations& violations,
+               rapidjson::Document::AllocatorType& allocator) {
+  rapidjson::Value json_violations(rapidjson::kArrayType);
+
+  for (const auto type : violations.types) {
+    rapidjson::Value json_violation(rapidjson::kObjectType);
+    std::string cause;
+    switch (type) {
+    case VIOLATION::LEAD_TIME:
+      cause = "lead_time";
+      json_violation.AddMember("duration", violations.lead_time, allocator);
+      break;
+    case VIOLATION::DELAY:
+      cause = "delay";
+      json_violation.AddMember("duration", violations.delay, allocator);
+      break;
+    case VIOLATION::LOAD:
+      cause = "load";
+      break;
+    case VIOLATION::SKILLS:
+      cause = "skills";
+      break;
+    case VIOLATION::PRECEDENCE:
+      cause = "precedence";
+      break;
+    case VIOLATION::MISSING_BREAK:
+      cause = "missing_break";
+      break;
+    }
+
+    json_violation.AddMember("cause", rapidjson::Value(), allocator);
+    json_violation["cause"].SetString(cause.c_str(), cause.size(), allocator);
+
+    json_violations.PushBack(json_violation, allocator);
+  }
+
+  return json_violations;
+}
 
 rapidjson::Document to_json(const Solution& sol, bool geometry) {
   rapidjson::Document json_output;
@@ -42,6 +81,21 @@ rapidjson::Document to_json(const Solution& sol, bool geometry) {
                            to_json(job.location, allocator),
                            allocator);
       }
+      json_job.AddMember("type", rapidjson::Value(), allocator);
+      std::string str_type;
+      switch (job.type) {
+      case JOB_TYPE::SINGLE:
+        str_type = "job";
+        break;
+      case JOB_TYPE::PICKUP:
+        str_type = "pickup";
+        break;
+      case JOB_TYPE::DELIVERY:
+        str_type = "delivery";
+        break;
+      }
+      json_job["type"].SetString(str_type.c_str(), str_type.size(), allocator);
+
       json_unassigned.PushBack(json_job, allocator);
     }
 
@@ -97,6 +151,10 @@ rapidjson::Value to_json(const Summary& summary,
   if (geometry) {
     json_summary.AddMember("distance", summary.distance, allocator);
   }
+
+  json_summary.AddMember("violations",
+                         get_violations(summary.violations, allocator),
+                         allocator);
 
   json_summary.AddMember("computing_times",
                          to_json(summary.computing_times, geometry, allocator),
@@ -158,6 +216,10 @@ rapidjson::Value to_json(const Route& route,
   }
 
   json_route.AddMember("steps", json_steps, allocator);
+
+  json_route.AddMember("violations",
+                       get_violations(route.violations, allocator),
+                       allocator);
 
   if (!route.geometry.empty()) {
     json_route.AddMember("geometry", rapidjson::Value(), allocator);
@@ -230,9 +292,10 @@ rapidjson::Value to_json(const Step& s,
 
   if (s.step_type == STEP_TYPE::JOB or s.step_type == STEP_TYPE::BREAK) {
     json_step.AddMember("id", s.id, allocator);
-    json_step.AddMember("service", s.service, allocator);
-    json_step.AddMember("waiting_time", s.waiting_time, allocator);
   }
+
+  json_step.AddMember("service", s.service, allocator);
+  json_step.AddMember("waiting_time", s.waiting_time, allocator);
 
   // Should be removed at some point as step.job is deprecated.
   if (s.step_type == STEP_TYPE::JOB) {
@@ -249,6 +312,10 @@ rapidjson::Value to_json(const Step& s,
 
   json_step.AddMember("arrival", s.arrival, allocator);
   json_step.AddMember("duration", s.duration, allocator);
+
+  json_step.AddMember("violations",
+                      get_violations(s.violations, allocator),
+                      allocator);
 
   if (geometry) {
     json_step.AddMember("distance", s.distance, allocator);

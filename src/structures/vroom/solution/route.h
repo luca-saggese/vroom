@@ -5,32 +5,36 @@
 
 This file is part of VROOM.
 
-Copyright (c) 2015-2020, Julien Coupey.
+Copyright (c) 2015-2021, Julien Coupey.
 All rights reserved (see LICENSE).
 
 */
 
 #include <string>
-#include <vector>
 
 #include "structures/vroom/solution/step.h"
+#include "structures/vroom/solution/violations.h"
 
 namespace vroom {
 
 struct Route {
-  const Id vehicle;
+  Id vehicle;
   std::vector<Step> steps;
-  const Cost cost;
-  const Duration service;
-  const Duration duration;
-  const Duration waiting_time;
-  const Priority priority;
-  const Amount delivery;
-  const Amount pickup;
-  const std::string description;
+  Cost cost;
+  Duration service;
+  Duration duration;
+  Duration waiting_time;
+  Priority priority;
+  Amount delivery;
+  Amount pickup;
+  std::string profile;
+  std::string description;
+  Violations violations;
 
   std::string geometry;
   Distance distance;
+
+  Route();
 
   Route(Id vehicle,
         std::vector<Step>&& steps,
@@ -41,7 +45,9 @@ struct Route {
         Priority priority,
         const Amount& delivery,
         const Amount& pickup,
-        const std::string& description);
+        const std::string& profile,
+        const std::string& description,
+        const Violations&& violations = Violations(0, 0));
 };
 
 } // namespace vroom

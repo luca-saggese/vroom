@@ -5,7 +5,7 @@
 
 This file is part of VROOM.
 
-Copyright (c) 2015-2020, Julien Coupey.
+Copyright (c) 2015-2021, Julien Coupey.
 All rights reserved (see LICENSE).
 
 */
@@ -13,17 +13,19 @@ All rights reserved (see LICENSE).
 #include <chrono>
 #include <memory>
 #include <unordered_map>
-#include <unordered_set>
-#include <vector>
 
 #include "routing/wrapper.h"
 #include "structures/generic/matrix.h"
 #include "structures/typedefs.h"
-#include "structures/vroom/job.h"
 #include "structures/vroom/solution/solution.h"
 #include "structures/vroom/vehicle.h"
 
 namespace vroom {
+
+namespace io {
+// Profile name used as key.
+using Servers = std::unordered_map<std::string, Server>;
+} // namespace io
 
 class VRP;
 
@@ -33,43 +35,61 @@ private:
   std::chrono::high_resolution_clock::time_point _end_loading;
   std::chrono::high_resolution_clock::time_point _end_solving;
   std::chrono::high_resolution_clock::time_point _end_routing;
-  std::unique_ptr<routing::Wrapper> _routing_wrapper;
+  std::unordered_set<std::string> _profiles;
+  std::vector<std::unique_ptr<routing::Wrapper>> _routing_wrappers;
   bool _no_addition_yet;
   bool _has_skills;
   bool _has_TW;
+  bool _has_custom_location_index;
   bool _homogeneous_locations;
+  bool _homogeneous_profiles;
   bool _geometry;
   bool _has_jobs;
   bool _has_shipments;
-  bool _has_custom_matrix;
-  Matrix<Cost> _matrix;
+  std::unordered_map<std::string, Matrix<Cost>> _matrices;
+  std::unordered_set<std::string> _custom_matrices;
   std::vector<Location> _locations;
   std::unordered_map<Location, Index> _locations_to_index;
   std::vector<std::vector<unsigned char>> _vehicle_to_job_compatibility;
   std::vector<std::vector<bool>> _vehicle_to_vehicle_compatibility;
-  std::unordered_set<Index> _matrix_used_index;
+  std::unordered_set<Index> _matrices_used_index;
+  Index _max_matrices_used_index;
   bool _all_locations_have_coords;
 
   const unsigned _amount_size;
   const Amount _zero;
 
+  const io::Servers _servers;
+  const ROUTER _router;
+
   std::unique_ptr<VRP> get_problem() const;
 
   void check_job(Job& job);
 
-  void check_cost_bound() const;
+  void check_cost_bound(const Matrix<Cost>& matrix) const;
 
-  void set_compatibility();
+  void set_skills_compatibility();
+  void set_extra_compatibility();
+  void set_vehicles_compatibility();
+  void set_vehicles_costs();
+  void set_matrices(unsigned nb_thread);
+
+  void add_routing_wrapper(const std::string& profile);
 
 public:
   std::vector<Job> jobs;
   std::vector<Vehicle> vehicles;
 
-  Input(unsigned amount_size);
+  // Store rank in jobs accessible from job/pickup/delivery id.
+  std::unordered_map<Id, Index> job_id_to_rank;
+  std::unordered_map<Id, Index> pickup_id_to_rank;
+  std::unordered_map<Id, Index> delivery_id_to_rank;
+
+  Input(unsigned amount_size,
+        const io::Servers& servers = {},
+        ROUTER router = ROUTER::OSRM);
 
   void set_geometry(bool geometry);
-
-  void set_routing(std::unique_ptr<routing::Wrapper> routing_wrapper);
 
   void add_job(const Job& job);
 
@@ -77,7 +97,7 @@ public:
 
   void add_vehicle(const Vehicle& vehicle);
 
-  void set_matrix(Matrix<Cost>&& m);
+  void set_matrix(const std::string& profile, Matrix<Cost>&& m);
 
   const Amount& zero_amount() const {
     return _zero;
@@ -91,6 +111,8 @@ public:
 
   bool has_homogeneous_locations() const;
 
+  bool has_homogeneous_profiles() const;
+
   bool vehicle_ok_with_job(size_t v_index, size_t j_index) const {
     return (bool)_vehicle_to_job_compatibility[v_index][j_index];
   }
@@ -98,16 +120,17 @@ public:
   // Returns true iff both vehicles have common job candidates.
   bool vehicle_ok_with_vehicle(Index v1_index, Index v2_index) const;
 
-  const Matrix<Cost>& get_matrix() const {
-    return _matrix;
+  Cost get_duration(const std::string& profile, Index i, Index j) const {
+    assert(_matrices.find(profile) != _matrices.end());
+    return _matrices.at(profile)[i][j];
   }
-
-  Matrix<Cost> get_sub_matrix(const std::vector<Index>& indices) const;
 
   Solution solve(unsigned exploration_level,
                  unsigned nb_thread,
                  const std::vector<HeuristicParameters>& h_param =
                    std::vector<HeuristicParameters>());
+
+  Solution check(unsigned nb_thread);
 };
 
 } // namespace vroom

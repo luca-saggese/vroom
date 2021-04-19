@@ -5,14 +5,13 @@
 
 This file is part of VROOM.
 
-Copyright (c) 2015-2020, Julien Coupey.
+Copyright (c) 2015-2021, Julien Coupey.
 All rights reserved (see LICENSE).
 
 */
 
 #include <string>
 #include <unordered_map>
-#include <vector>
 
 #include "structures/typedefs.h"
 
@@ -25,6 +24,7 @@ using Servers = std::unordered_map<std::string, Server>;
 struct CLArgs {
   // Listing command-line options.
   Servers servers;                           // -a and -p
+  bool check;                                // -c
   std::vector<HeuristicParameters> h_params; // -e
   bool geometry;                             // -g
   std::string input_file;                    // -i

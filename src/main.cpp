@@ -2,7 +2,7 @@
 
 This file is part of VROOM.
 
-Copyright (c) 2015-2020, Julien Coupey.
+Copyright (c) 2015-2021, Julien Coupey.
 All rights reserved (see LICENSE).
 
 */
@@ -10,7 +10,11 @@ All rights reserved (see LICENSE).
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#ifndef _WIN32
 #include <unistd.h>
+#else
+#include "getopt_win.h"
+#endif
 
 #if USE_LIBOSRM
 #include "osrm/exception.hpp"
@@ -18,28 +22,27 @@ All rights reserved (see LICENSE).
 
 #include "problems/vrp.h"
 #include "structures/cl_args.h"
-#include "structures/typedefs.h"
-#include "structures/vroom/input/input.h"
-#include "utils/exception.h"
 #include "utils/helpers.h"
 #include "utils/input_parser.h"
 #include "utils/output_json.h"
 #include "utils/version.h"
 
 void display_usage() {
-  std::string usage = "VROOM Copyright (C) 2015-2020, Julien Coupey\n";
+  std::string usage = "VROOM Copyright (C) 2015-2021, Julien Coupey\n";
   usage += "Version: " + vroom::get_version() + "\n";
   usage += "Usage:\n\tvroom [OPTION]... \"INPUT\"";
   usage += "\n\tvroom [OPTION]... -i FILE\n";
+  usage += "\tvroom [OPTION]...\n";
   usage += "Options:\n";
   usage += "\t-a PROFILE:HOST (=" + vroom::DEFAULT_PROFILE +
            ":0.0.0.0)\t routing server\n";
+  usage += "\t-c,\t\t\t\t choose ETA for custom routes and report violations\n";
   usage += "\t-g,\t\t\t\t add detailed route geometry and indicators\n";
   usage += "\t-i FILE,\t\t\t read input from FILE rather than from stdin\n";
   usage += "\t-o OUTPUT,\t\t\t output file name\n";
   usage += "\t-p PROFILE:PORT (=" + vroom::DEFAULT_PROFILE +
            ":5000),\t routing server port\n";
-  usage += "\t-r ROUTER (=osrm),\t\t osrm, libosrm or ors\n";
+  usage += "\t-r ROUTER (=osrm),\t\t osrm, libosrm, ors or valhalla\n";
   usage += "\t-t THREADS (=4),\t\t number of threads to use\n";
   usage += "\t-x EXPLORE (=5),\t\t exploration level to use (0..5)";
   std::cout << usage << std::endl;
@@ -51,7 +54,7 @@ int main(int argc, char** argv) {
   vroom::io::CLArgs cl_args;
 
   // Parsing command-line arguments.
-  const char* optString = "a:e:gi:o:p:r:t:x:h?";
+  const char* optString = "a:ce:gi:o:p:r:t:x:h?";
   int opt = getopt(argc, argv, optString);
 
   std::string router_arg;
@@ -63,6 +66,9 @@ int main(int argc, char** argv) {
     switch (opt) {
     case 'a':
       vroom::io::update_host(cl_args.servers, optarg);
+      break;
+    case 'c':
+      cl_args.check = true;
       break;
     case 'e':
       heuristic_params_arg.push_back(optarg);
@@ -118,6 +124,8 @@ int main(int argc, char** argv) {
     cl_args.router = vroom::ROUTER::LIBOSRM;
   } else if (router_arg == "ors") {
     cl_args.router = vroom::ROUTER::ORS;
+  } else if (router_arg == "valhalla") {
+    cl_args.router = vroom::ROUTER::VALHALLA;
   } else if (!router_arg.empty() and router_arg != "osrm") {
     auto error_code = vroom::utils::get_code(vroom::ERROR::INPUT);
     std::string message = "Invalid routing engine: " + router_arg + ".";
@@ -149,28 +157,32 @@ int main(int argc, char** argv) {
     cl_args.servers.emplace(vroom::DEFAULT_PROFILE, vroom::Server());
   }
 
-  if (cl_args.input_file.empty()) {
-    // Getting input from command-line.
-    if (argc == optind) {
-      // Missing argument!
-      display_usage();
-    }
-    cl_args.input = argv[optind];
-  } else {
-    // Getting input from provided file.
-    std::ifstream ifs(cl_args.input_file);
+  // Read input problem
+  if (optind == argc) {
     std::stringstream buffer;
-    buffer << ifs.rdbuf();
+    if (cl_args.input_file.empty()) {
+      // Getting input from stdin.
+      buffer << std::cin.rdbuf();
+    } else {
+      // Getting input from provided file.
+      std::ifstream ifs(cl_args.input_file);
+      buffer << ifs.rdbuf();
+    }
     cl_args.input = buffer.str();
+  } else {
+    // Getting input from command-line.
+    cl_args.input = argv[optind];
   }
 
   try {
     // Build problem.
     vroom::Input problem_instance = vroom::io::parse(cl_args);
 
-    vroom::Solution sol = problem_instance.solve(cl_args.exploration_level,
-                                                 cl_args.nb_threads,
-                                                 cl_args.h_params);
+    vroom::Solution sol = (cl_args.check)
+                            ? problem_instance.check(cl_args.nb_threads)
+                            : problem_instance.solve(cl_args.exploration_level,
+                                                     cl_args.nb_threads,
+                                                     cl_args.h_params);
 
     // Write solution.
     vroom::io::write_to_json(sol, cl_args.geometry, cl_args.output_file);
